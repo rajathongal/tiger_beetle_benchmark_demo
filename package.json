@@ -1,0 +1,22 @@
+{
+  "name": "tiger_beetle_simulation",
+  "version": "0.0.1",
+  "description": "## Running a single node cluster",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare:tigerbeetle": "docker run -v $(pwd)/data:/data ghcr.io/tigerbeetle/tigerbeetle format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle",
+    "start:tigerbeetle": "docker run -p 3000:3000 -v $(pwd)/data:/data ghcr.io/tigerbeetle/tigerbeetle start --addresses=0.0.0.0:3000 /data/0_0.tigerbeetle"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rajathongal/tiger_beetle_simulation.git"
+  },
+  "author": "reachme.rajathongal@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rajathongal/tiger_beetle_simulation/issues"
+  },
+  "homepage": "https://github.com/rajathongal/tiger_beetle_simulation#readme"
+}
