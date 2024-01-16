@@ -7,7 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare:tigerbeetle": "docker run -v $(pwd)/data:/data ghcr.io/tigerbeetle/tigerbeetle format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle",
-    "start:tigerbeetle": "docker run -p 3000:3000 -v $(pwd)/data:/data ghcr.io/tigerbeetle/tigerbeetle start --addresses=0.0.0.0:3000 /data/0_0.tigerbeetle"
+    "start:tigerbeetle": "docker run -p 3000:3000 -v $(pwd)/data:/data ghcr.io/tigerbeetle/tigerbeetle start --addresses=0.0.0.0:3000 /data/0_0.tigerbeetle",
+    "start:server": "node server/index.js"
   },
   "repository": {
     "type": "git",
@@ -18,5 +19,10 @@
   "bugs": {
     "url": "https://github.com/rajathongal/tiger_beetle_simulation/issues"
   },
-  "homepage": "https://github.com/rajathongal/tiger_beetle_simulation#readme"
+  "homepage": "https://github.com/rajathongal/tiger_beetle_simulation#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "path": "^0.12.7"
+  }
 }
