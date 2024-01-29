@@ -22,7 +22,12 @@
   "homepage": "https://github.com/rajathongal/tiger_beetle_simulation#readme",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.3.2",
     "express": "^4.18.2",
-    "path": "^0.12.7"
+    "mongoose": "^8.1.1",
+    "path": "^0.12.7",
+    "redis": "^4.6.12",
+    "tigerbeetle-node": "^0.14.176",
+    "uuid": "^9.0.1"
   }
 }

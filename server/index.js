@@ -1,9 +1,24 @@
+import "./utils/initEnv.js";
 import express from "express";
 import path from "path";
 import cors from "cors";
-import { corsOptionsDelegate } from "./utils/cors.js";
+import { corsOptionsDelegate } from "./utils/initCors.js";
+import initRedis from "./utils/initRedis.js";
+import initMongoDB from "./utils/initMongoDB.js";
+import redisService from "./utils/redis.service.js";
+import routes from "./routes.js";
+import mongoose from "mongoose";
 
 async function main() {
+  // External Packages Init
+  const redisClient = await initRedis();
+  await redisClient.connect();
+  console.log("Redis client connected")
+  await initMongoDB();
+  console.log("MongoDB client connected")
+
+  redisService.initializeRedis(redisClient);
+
   const PORT = process.env.PORT || 5001;
   const server = express();
   /**
@@ -11,7 +26,7 @@ async function main() {
    */
   server.use(cors(corsOptionsDelegate));
   server.use(express.json());
-
+  server.use(routes)
   /**
    * Routes
    */
@@ -33,14 +48,17 @@ async function main() {
   });
 
   server.listen(PORT, async () => {
-
     console.info(`App running on Port ${PORT}`);
-    
-    const gracefulShutdown = async() => {
-        console.info("Graceful shutdown")
-        process.exit(0);
+
+    const gracefulShutdown = async () => {
+      redisClient.quit();
+      console.info("\nRedis disconnected");
+      await mongoose.quit();
+      console.info("MongoDB disconnected");
+      console.info("Graceful shutdown");
+      process.exit(0);
     };
-  
+
     [
       "beforeExit",
       "uncaughtException",
@@ -57,9 +75,10 @@ async function main() {
       "SIGSEGV",
       "SIGUSR2",
       "SIGTERM",
-    ].forEach((evt) => process.on(evt, gracefulShutdown));
-});
+    ].forEach((evt) => {
+      process.on(evt, gracefulShutdown);
+    });
+  });
 }
 
-main()
-  
+main();
