@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import client from "../utils/initTigerBeetleClient.js";
 import generateUUID from "../utils/initUUIDGenerator.js";
+import UsersModel from "../models/UsersModel.js";
 /**
  * Creates an account by generating a key pair using the crypto module.
  * Returns the generated key pair in the response body.
@@ -50,6 +51,11 @@ const createAccount = async (request, response) => {
         message: "Failed to create account",
       });
     }
+
+    await UsersModel.create({
+      accountId: accountId.toString(),
+      publicKey: publicKey,
+    });
 
     return response.status(200).json({
       sucess: true,

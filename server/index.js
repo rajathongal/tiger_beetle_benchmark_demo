@@ -53,7 +53,7 @@ async function main() {
     const gracefulShutdown = async () => {
       redisClient.quit();
       console.info("\nRedis disconnected");
-      await mongoose.quit();
+      mongoose.connection.close();
       console.info("MongoDB disconnected");
       console.info("Graceful shutdown");
       process.exit(0);
