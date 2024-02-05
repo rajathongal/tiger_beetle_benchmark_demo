@@ -30,12 +30,12 @@ const GetNonce = async (request, response) => {
     }
 
     const nonce = crypto.randomBytes(16).toString("hex");
-    await redisService.set(`${accountId}/${nonce}`, false, 300); // key, value, ttl
+    await redisService.set(`${accountId}/${nonce}`, "false", 600); // key, value, ttl
 
     return response.status(200).json({
       success: true,
       nonce: nonce,
-      message: "This nonce is valid for 5 Minutes",
+      message: "This nonce is valid for 10 Minutes",
     });
   } catch (error) {
     return response.status(504).json({
@@ -95,7 +95,7 @@ const GetSignedTransaction = async (request, response) => {
 
     return response.status(200).json({
       sucess: true,
-      data,
+      ...data,
       signature
     });
 

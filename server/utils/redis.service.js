@@ -16,7 +16,7 @@ class RedisService {
       if (expireIn == null || expireIn == undefined) {
         return await this.client.set(key, value);
       } else {
-        return await this.client.set(key, value, "EX", expireIn);
+        return await this.client.set(key, value, {"EX": expireIn});
       }
     } catch (error) {
       throw error;

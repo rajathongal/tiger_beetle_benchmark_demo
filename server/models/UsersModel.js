@@ -7,7 +7,7 @@ const UsersModel = new Schema({
     },
     publicKey: {
         type: String,
-        required: [true, "AccountId is required!"],
+        required: [true, "publicKey is required!"],
     }
 });
 
