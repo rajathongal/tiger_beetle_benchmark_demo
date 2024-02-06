@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import RequiredVaulesValidator from "../utils/requiredValuesValidator.js";
-import { isUserExists } from "../utils/validators.js";
 import redisService from "../utils/redis.service.js";
 import UsersModel from "../models/UsersModel.js";
+import TransfersModel from "../models/TransfersModel.js";
 
 const createTransfer = async (request, response) => {
   try {
@@ -58,7 +58,10 @@ const createTransfer = async (request, response) => {
       `${senderAccountId}/${nonce}`
     );
 
-    if ((!nonceInformation && nonceInformation !== false) || nonceInformation === "true") {
+    if (
+      (!nonceInformation && nonceInformation !== false) ||
+      nonceInformation === "true"
+    ) {
       return response.status(404).json({
         success: false,
         message: "Nonce expired",
@@ -66,6 +69,31 @@ const createTransfer = async (request, response) => {
     }
 
     await redisService.set(`${senderAccountId}/${nonce}`, "true", 600);
+
+    const verify = crypto.createVerify("sha256");
+
+    const data = {
+      senderAccountId,
+      receiverAccountId,
+      senderPublicKey,
+      recipientPublicKey,
+      amount,
+      nonce,
+    };
+
+    verify.update(JSON.stringify(data));
+    const isDataVerified = verify.verify(senderPublicKey, signature, "hex");
+
+    if (!isDataVerified) {
+      return response.status(404).json({
+        success: false,
+        message: "Malicious signature/transaction received",
+      });
+    }
+
+    await TransfersModel.create({
+      ...data,
+    });
 
     return response.status(200).json({
       sucess: true,

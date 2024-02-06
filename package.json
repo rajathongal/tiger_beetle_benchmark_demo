@@ -25,6 +25,7 @@
     "dotenv": "^16.3.2",
     "express": "^4.18.2",
     "mongoose": "^8.1.1",
+    "node-schedule": "^2.1.1",
     "path": "^0.12.7",
     "redis": "^4.6.12",
     "tigerbeetle-node": "^0.14.176",
