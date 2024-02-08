@@ -29,6 +29,10 @@ const TransfersModel = new Schema({
         type: Boolean,
         default: false
     },
+    identifier: {
+        type: Number,
+        required: [true, "identifier is required!"]
+    },
     error: {
         type: Boolean,
         default: false

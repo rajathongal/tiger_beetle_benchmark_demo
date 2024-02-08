@@ -1,7 +1,10 @@
+import UniqueFIFOStack from "./FIFOStack";
+
 class RedisService {
   // This function will be called during server initialization
   async initializeRedis(client) {
     this.client = client;
+    this.batchIdentifiersStack = new UniqueFIFOStack("batchIdentifiers", client)
   }
 
   async get(key) {

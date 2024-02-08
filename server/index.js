@@ -8,6 +8,8 @@ import initMongoDB from "./utils/initMongoDB.js";
 import redisService from "./utils/redis.service.js";
 import routes from "./routes.js";
 import mongoose from "mongoose";
+import scheduler from "node-schedule";
+import { batchTransferWorker } from "./controllers/handleTransfers.js";
 
 async function main() {
   // External Packages Init
@@ -16,8 +18,9 @@ async function main() {
   console.log("Redis client connected")
   await initMongoDB();
   console.log("MongoDB client connected")
-
   redisService.initializeRedis(redisClient);
+  await batchTransferWorker();
+  console.log("Batch execution worker started")
 
   const PORT = process.env.PORT || 5001;
   const server = express();
@@ -26,14 +29,13 @@ async function main() {
    */
   server.use(cors(corsOptionsDelegate));
   server.use(express.json());
-  server.use(routes)
   /**
    * Routes
    */
-  server.get("/", (resquest, response) =>
+  server.get("/", (request, response) =>
     response.sendFile(path.join(__dirname, "public", "index.html"))
   );
-  server.get("/health", (resquest, response) => {
+  server.get("/health", (request, response) => {
     const healthcheck = {
       uptime: process.uptime(),
       message: "OK",
@@ -46,6 +48,7 @@ async function main() {
       response.status(503).send();
     }
   });
+  server.use(routes);
 
   server.listen(PORT, async () => {
     console.info(`App running on Port ${PORT}`);
@@ -55,6 +58,8 @@ async function main() {
       console.info("\nRedis disconnected");
       mongoose.connection.close();
       console.info("MongoDB disconnected");
+      await scheduler.gracefulShutdown();
+      console.info("Batch Execution workers stopped");
       console.info("Graceful shutdown");
       process.exit(0);
     };

@@ -3,6 +3,8 @@ import RequiredVaulesValidator from "../utils/requiredValuesValidator.js";
 import redisService from "../utils/redis.service.js";
 import UsersModel from "../models/UsersModel.js";
 import TransfersModel from "../models/TransfersModel.js";
+import scheduler from "node-schedule";
+import generateTimeBasedIdentifier from "../utils/timeBasedIdentifierGenerator.js";
 
 const createTransfer = async (request, response) => {
   try {
@@ -90,9 +92,12 @@ const createTransfer = async (request, response) => {
         message: "Malicious signature/transaction received",
       });
     }
+    const identifier = generateTimeBasedIdentifier();
+    await redisService.batchIdentifiersStack.push(identifier);
 
     await TransfersModel.create({
       ...data,
+      identifier: identifier
     });
 
     return response.status(200).json({
@@ -118,4 +123,21 @@ const getTransfer = async (request, response) => {
   }
 };
 
-export { createTransfer, getTransfer };
+const batchExecuteTransfer = async () => {
+  try {
+
+  } catch (error) {
+    throw error;
+  }
+};
+
+const batchTransferWorker = async() => {
+    try {
+        scheduler.scheduleJob("* * * * * *", batchExecuteTransfer);
+        return;
+    } catch (error) {
+        throw error;
+    }
+}
+
+export { createTransfer, getTransfer, batchExecuteTransfer, batchTransferWorker };
