@@ -1,4 +1,4 @@
-import UniqueFIFOStack from "./FIFOStack";
+import UniqueFIFOStack from "./FIFOStack.js";
 
 class RedisService {
   // This function will be called during server initialization

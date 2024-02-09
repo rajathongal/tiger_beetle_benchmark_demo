@@ -5,6 +5,7 @@ import UsersModel from "../models/UsersModel.js";
 import TransfersModel from "../models/TransfersModel.js";
 import scheduler from "node-schedule";
 import generateTimeBasedIdentifier from "../utils/timeBasedIdentifierGenerator.js";
+import client from "../utils/initTigerBeetleClient.js";
 
 const createTransfer = async (request, response) => {
   try {
@@ -97,7 +98,7 @@ const createTransfer = async (request, response) => {
 
     await TransfersModel.create({
       ...data,
-      identifier: identifier
+      identifier: identifier,
     });
 
     return response.status(200).json({
@@ -125,19 +126,55 @@ const getTransfer = async (request, response) => {
 
 const batchExecuteTransfer = async () => {
   try {
+    const IsDataAvailable =
+      await redisService.batchIdentifiersStack.getAllElements();
+    if (IsDataAvailable.length === 0) {
+      return;
+    }
+    const popedIdenifier = await redisService.batchIdentifiersStack.pop();
 
+    // Count documents that match a specific condition
+    const totalMatchingRecords = await TransfersModel.countDocuments({
+      identifier: popedIdenifier,
+    });
+    let count = 0;
+    let previousRecordId = "";
+
+    batchProcessor: while (count < totalMatchingRecords) {
+      const query = previousRecordId
+        ? { _id: { $gt: previousRecordId }, identifier: popedIdenifier }
+        : { identifier: popedIdenifier };
+
+      const transfersToExecute = await TransfersModel.find(query).limit(8190);
+
+      if (transfersToExecute.length === 0) {
+        break batchProcessor;
+      }
+
+      count += 8190;
+
+      const transferErrors = await client.createTransfers(transfersToExecute)
+
+    }
+
+    return;
   } catch (error) {
     throw error;
   }
 };
 
-const batchTransferWorker = async() => {
-    try {
-        scheduler.scheduleJob("* * * * * *", batchExecuteTransfer);
-        return;
-    } catch (error) {
-        throw error;
-    }
-}
+const batchTransferWorker = async () => {
+  try {
+    // scheduler.scheduleJob("* * * * * *", batchExecuteTransfer);
+    return;
+  } catch (error) {
+    throw error;
+  }
+};
 
-export { createTransfer, getTransfer, batchExecuteTransfer, batchTransferWorker };
+export {
+  createTransfer,
+  getTransfer,
+  batchExecuteTransfer,
+  batchTransferWorker,
+};
