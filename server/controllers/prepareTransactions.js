@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import RequiredVaulesValidator from "../utils/requiredValuesValidator.js";
-import { isUserExists } from "../utils/validators.js";
+import { isUserExists, countDecimals } from "../utils/validators.js";
 import redisService from "../utils/redis.service.js";
 import UsersModel from "../models/UsersModel.js";
 
@@ -76,6 +76,15 @@ const GetSignedTransaction = async (request, response) => {
       return response.status(404).json({
         success: false,
         message: "Sender or Recipient Acount not found",
+      });
+    }
+
+    const decimalCountOfAmount = countDecimals(parseFloat(amount));
+
+    if(decimalCountOfAmount > 2) {
+      return response.status(404).json({
+        success: false,
+        message: "Amount Should have a maximum of 2 decimal places",
       });
     }
 

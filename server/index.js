@@ -54,12 +54,13 @@ async function main() {
     console.info(`App running on Port ${PORT}`);
 
     const gracefulShutdown = async () => {
+      
+      await scheduler.gracefulShutdown();
+      console.info("Batch Execution workers stopped");
       redisClient.quit();
       console.info("\nRedis disconnected");
       mongoose.connection.close();
       console.info("MongoDB disconnected");
-      await scheduler.gracefulShutdown();
-      console.info("Batch Execution workers stopped");
       console.info("Graceful shutdown");
       process.exit(0);
     };
@@ -82,6 +83,8 @@ async function main() {
       "SIGTERM",
     ].forEach((evt) => {
       process.on(evt, gracefulShutdown);
+      process.on(evt, console.log);
+
     });
   });
 }

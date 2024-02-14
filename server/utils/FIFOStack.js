@@ -14,7 +14,7 @@ class UniqueFIFOStack {
 
     if (isUnique) {
       // Add the element to the list
-      await this.lPush(this.listKey, element);
+      await this.redisClient.lPush(this.listKey, element);
     } else {
       console.log(`Element "${element}" already exists and won't be added.`);
     }

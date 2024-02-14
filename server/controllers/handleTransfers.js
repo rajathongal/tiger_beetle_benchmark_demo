@@ -6,6 +6,8 @@ import TransfersModel from "../models/TransfersModel.js";
 import scheduler from "node-schedule";
 import generateTimeBasedIdentifier from "../utils/timeBasedIdentifierGenerator.js";
 import client from "../utils/initTigerBeetleClient.js";
+import generateUUID from "../utils/initUUIDGenerator.js";
+import { countDecimals } from "../utils/validators.js";
 
 const createTransfer = async (request, response) => {
   try {
@@ -56,6 +58,15 @@ const createTransfer = async (request, response) => {
       });
     }
 
+    const decimalCountOfAmount = countDecimals(parseFloat(amount));
+
+    if (decimalCountOfAmount > 2) {
+      return response.status(404).json({
+        success: false,
+        message: "Amount Should have a maximum of 2 decimal places",
+      });
+    }
+
     //  nonce validation
     const nonceInformation = await redisService.get(
       `${senderAccountId}/${nonce}`
@@ -94,17 +105,19 @@ const createTransfer = async (request, response) => {
       });
     }
     const identifier = generateTimeBasedIdentifier();
+    const referenceId = generateUUID();
     await redisService.batchIdentifiersStack.push(identifier);
 
     await TransfersModel.create({
       ...data,
       identifier: identifier,
+      transactionId: referenceId.toString(),
     });
 
     return response.status(200).json({
       sucess: true,
       message: "Transfer Initiated",
-      referenceId: "",
+      transactionId: referenceId.toString(),
     });
   } catch (error) {
     return response.status(504).json({
@@ -114,8 +127,36 @@ const createTransfer = async (request, response) => {
   }
 };
 
-const getTransfer = async (request, response) => {
+const getTransferByTransactionId = async (request, response) => {
   try {
+    const { transactionId } = request.params;
+
+    if (transactionId === ":transactionId" || !transactionId) {
+      return response.status(404).json({
+        message: "Please provide valid transactionId",
+      });
+    }
+
+    const transfer = await client.lookupTransfers([BigInt(transactionId)]);
+
+    if (transfer.length === 0) {
+      return response.status(404).json({
+        success: false,
+        message: "Transfer not found",
+      });
+    }
+
+    if (transfer[0].pending_id !== BigInt(0)) {
+      return response.status(404).json({
+        success: false,
+        message: "Transfer Failed or Pending",
+      });
+    }
+
+    return response.status(200).json({
+      sucess: true,
+      message: "Transfer Sucessful",
+    });
   } catch (error) {
     return response.status(504).json({
       success: false,
@@ -124,48 +165,11 @@ const getTransfer = async (request, response) => {
   }
 };
 
-const batchExecuteTransfer = async () => {
-  try {
-    const IsDataAvailable =
-      await redisService.batchIdentifiersStack.getAllElements();
-    if (IsDataAvailable.length === 0) {
-      return;
-    }
-    const popedIdenifier = await redisService.batchIdentifiersStack.pop();
 
-    // Count documents that match a specific condition
-    const totalMatchingRecords = await TransfersModel.countDocuments({
-      identifier: popedIdenifier,
-    });
-    let count = 0;
-    let previousRecordId = "";
-
-    batchProcessor: while (count < totalMatchingRecords) {
-      const query = previousRecordId
-        ? { _id: { $gt: previousRecordId }, identifier: popedIdenifier }
-        : { identifier: popedIdenifier };
-
-      const transfersToExecute = await TransfersModel.find(query).limit(8190);
-
-      if (transfersToExecute.length === 0) {
-        break batchProcessor;
-      }
-
-      count += 8190;
-
-      const transferErrors = await client.createTransfers(transfersToExecute)
-
-    }
-
-    return;
-  } catch (error) {
-    throw error;
-  }
-};
 
 const batchTransferWorker = async () => {
   try {
-    // scheduler.scheduleJob("* * * * * *", batchExecuteTransfer);
+    scheduler.scheduleJob("* * * * * *", batchExecuteTransfer);
     return;
   } catch (error) {
     throw error;
@@ -174,7 +178,7 @@ const batchTransferWorker = async () => {
 
 export {
   createTransfer,
-  getTransfer,
+  getTransferByTransactionId,
   batchExecuteTransfer,
   batchTransferWorker,
 };

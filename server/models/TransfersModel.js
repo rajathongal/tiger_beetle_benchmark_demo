@@ -17,6 +17,10 @@ const TransfersModel = new Schema({
         type: String,
         required: [true, "recipientPublicKey is required!"],
     },
+    transactionId: {
+        type: String,
+        required: [true, "transactionId is required!"],
+    },
     amount: {
         type: String,
         required: [true, "amount is required!"],
@@ -30,7 +34,7 @@ const TransfersModel = new Schema({
         default: false
     },
     identifier: {
-        type: Number,
+        type: String,
         required: [true, "identifier is required!"]
     },
     error: {
