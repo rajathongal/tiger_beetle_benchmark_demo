@@ -9,18 +9,19 @@ import redisService from "./utils/redis.service.js";
 import routes from "./routes.js";
 import mongoose from "mongoose";
 import scheduler from "node-schedule";
-import { batchTransferWorker } from "./controllers/handleTransfers.js";
+import { initBatchTransferWorker } from "./controllers/handleTransfers.js";
 
 async function main() {
   // External Packages Init
   const redisClient = await initRedis();
   await redisClient.connect();
-  console.log("Redis client connected")
+  console.log("Redis client connected");
   await initMongoDB();
-  console.log("MongoDB client connected")
-  redisService.initializeRedis(redisClient);
-  await batchTransferWorker();
-  console.log("Batch execution worker started")
+  console.log("MongoDB client connected");
+  await redisService.initializeRedis(redisClient);
+
+  await initBatchTransferWorker();
+  console.log("Batch execution worker started");
 
   const PORT = process.env.PORT || 5001;
   const server = express();
@@ -54,7 +55,6 @@ async function main() {
     console.info(`App running on Port ${PORT}`);
 
     const gracefulShutdown = async () => {
-      
       await scheduler.gracefulShutdown();
       console.info("Batch Execution workers stopped");
       redisClient.quit();
@@ -84,7 +84,6 @@ async function main() {
     ].forEach((evt) => {
       process.on(evt, gracefulShutdown);
       process.on(evt, console.log);
-
     });
   });
 }

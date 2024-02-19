@@ -1,35 +1,58 @@
-import { promisify } from "util";
-
 class UniqueFIFOStack {
   constructor(stackName, redisClient) {
     this.stackName = stackName;
     this.setKey = `${stackName}:set`;
     this.listKey = `${stackName}:list`;
-    this.redisClient = redisClient
+    this.lockKey = `${stackName}:lock`;
+    this.redisClient = redisClient;
   }
 
   async push(element) {
-    // Check if the element is unique
-    const isUnique = await this.redisClient.sAdd(this.setKey, element) === 1;
+    const lockAcquired = await this.redisClient.setNX(this.lockKey, "1");
 
-    if (isUnique) {
-      // Add the element to the list
-      await this.redisClient.lPush(this.listKey, element);
-    } else {
-      console.log(`Element "${element}" already exists and won't be added.`);
+    if (!lockAcquired) {
+      console.log("Unable to acquire lock, will retry later...");
+      return;
+    }
+
+    try {
+      // Check if the element is unique
+      const isUnique =
+        (await this.redisClient.sAdd(this.setKey, element)) === 1;
+
+      if (isUnique) {
+        // Add the element to the list
+        await this.redisClient.lPush(this.listKey, element);
+      } else {
+        console.log(`Element "${element}" already exists and won't be added.`);
+      }
+    } finally {
+      // Ensure lock release even if errors occur
+      await this.redisClient.del(this.lockKey);
     }
   }
 
   async pop() {
-    // Remove the last element from the list
-    const poppedElement = await this.redisClient.rPop(this.listKey);
+    const lockAcquired = await this.redisClient.setNX(this.lockKey, "1");
 
-    if (poppedElement) {
-      // Remove the popped element from the set to allow reinsertion
-      await this.redisClient.sRem(this.setKey, poppedElement);
+    if (!lockAcquired) {
+      console.log("Unable to acquire lock, will retry later...");
+      return;
     }
+    try {
+      // Remove the last element from the list
+      const poppedElement = await this.redisClient.rPop(this.listKey);
 
-    return poppedElement;
+      if (poppedElement) {
+        // Remove the popped element from the set to allow reinsertion
+        await this.redisClient.sRem(this.setKey, poppedElement);
+      }
+
+      return poppedElement;
+    } finally {
+      // Ensure lock release even if errors occur
+      await this.redisClient.del(this.lockKey);
+    }
   }
 
   async getAllElements() {
