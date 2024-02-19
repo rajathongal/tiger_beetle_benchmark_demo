@@ -4,6 +4,7 @@ import TransfersModel from "../models/TransfersModel.js";
 import client from "../utils/initTigerBeetleClient.js";
 import initMongoDB from "../utils/initMongoDB.js";
 import mongoose from "mongoose";
+import logger from "../utils/initLogger.js";
 
 const batchExecuteTransfer = async () => {
   try {
@@ -14,7 +15,9 @@ const batchExecuteTransfer = async () => {
 
     const popedIdenifier = await redisService.batchIdentifiersStack.pop();
     if (popedIdenifier) {
-      console.info("Executing batch processor for " + popedIdenifier);
+      logger.info(
+        "Starting Child Process for transfers for identifier: " + popedIdenifier
+      );
 
       // Count documents that match a specific condition
       const totalMatchingRecords = await TransfersModel.countDocuments({
@@ -22,6 +25,10 @@ const batchExecuteTransfer = async () => {
       });
       let count = 0;
       let previousRecordId = "";
+
+      // Provides the highest resolution (nanosecond precision) 
+      // Returns an array with [seconds, nanoseconds]
+      const startTime = process.hrtime();
 
       batchProcessor: while (count < totalMatchingRecords) {
         const query = previousRecordId
@@ -62,6 +69,10 @@ const batchExecuteTransfer = async () => {
         }
       }
 
+      const tigerBeetleEndTime = process.hrtime(startTime);
+      const tigerBeetleExecutionTime = tigerBeetleEndTime[0] + tigerBeetleEndTime[1] / 1000000000;
+      logger.info(`Execution time of tiger beetle: ${tigerBeetleExecutionTime.toFixed(3)} seconds for ${totalMatchingRecords} records`);
+
       const filter = {
         identifier: popedIdenifier,
       };
@@ -75,6 +86,10 @@ const batchExecuteTransfer = async () => {
       };
 
       await TransfersModel.updateMany(filter, update, options);
+
+      const endTime = process.hrtime(startTime);
+      const executionTime = endTime[0] + endTime[1] / 1000000000;
+      logger.info(`Execution time of whole transfer: ${executionTime.toFixed(3)} seconds for ${totalMatchingRecords} records`);
     }
 
     redisClient.quit();

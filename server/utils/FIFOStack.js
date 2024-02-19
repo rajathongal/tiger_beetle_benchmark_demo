@@ -1,3 +1,4 @@
+import logger from "./initLogger.js";
 class UniqueFIFOStack {
   constructor(stackName, redisClient) {
     this.stackName = stackName;
@@ -11,7 +12,7 @@ class UniqueFIFOStack {
     const lockAcquired = await this.redisClient.setNX(this.lockKey, "1");
 
     if (!lockAcquired) {
-      console.log("Unable to acquire lock, will retry later...");
+      logger.warn("Unable to acquire lock, will retry later...");
       return;
     }
 
@@ -24,7 +25,7 @@ class UniqueFIFOStack {
         // Add the element to the list
         await this.redisClient.lPush(this.listKey, element);
       } else {
-        console.log(`Element "${element}" already exists and won't be added.`);
+        logger.warn(`Element "${element}" already exists and won't be added.`);
       }
     } finally {
       // Ensure lock release even if errors occur
@@ -36,7 +37,7 @@ class UniqueFIFOStack {
     const lockAcquired = await this.redisClient.setNX(this.lockKey, "1");
 
     if (!lockAcquired) {
-      console.log("Unable to acquire lock, will retry later...");
+      logger.warn("Unable to acquire lock, will retry later...");
       return;
     }
     try {

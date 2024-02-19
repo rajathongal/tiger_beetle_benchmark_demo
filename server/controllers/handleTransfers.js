@@ -9,6 +9,7 @@ import client from "../utils/initTigerBeetleClient.js";
 import generateUUID from "../utils/initUUIDGenerator.js";
 import { countDecimals } from "../utils/validators.js";
 import { fork } from "child_process";
+import logger from "../utils/initLogger.js";
 
 const createTransfer = async (request, response) => {
   try {
@@ -172,19 +173,19 @@ const batchTransferWorker = async () => {
       await redisService.batchIdentifiersStack.getAllElements();
 
     if (IsDataAvailable.length === 0) {
-      console.info("Batch Processor exiting due to no records available");
+      logger.trace("Batch Processor exiting due to no records available");
 
       return;
     }
     const childProcess = fork("./server/controllers/batchTransferWorker.js");
 
     childProcess.on("message", (message) => {
-      console.log("Message from child:", message);
+      logger.info("Message from child:", message);
     });
 
     // Optional: Handle errors and restarts
     childProcess.on("error", (err) => {
-      console.error("Error in child process:", err);
+      logger.error("Error in child process:", err);
     });
   } catch (error) {
     throw error;

@@ -10,6 +10,7 @@ import routes from "./routes.js";
 import mongoose from "mongoose";
 import scheduler from "node-schedule";
 import { initBatchTransferWorker } from "./controllers/handleTransfers.js";
+import pino from "pino-http";
 
 async function main() {
   // External Packages Init
@@ -30,6 +31,7 @@ async function main() {
    */
   server.use(cors(corsOptionsDelegate));
   server.use(express.json());
+  server.use(pino());
   /**
    * Routes
    */
