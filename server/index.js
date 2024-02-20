@@ -11,18 +11,19 @@ import mongoose from "mongoose";
 import scheduler from "node-schedule";
 import { initBatchTransferWorker } from "./controllers/handleTransfers.js";
 import pino from "pino-http";
+import logger from "./utils/initLogger.js";
 
 async function main() {
   // External Packages Init
   const redisClient = await initRedis();
   await redisClient.connect();
-  console.log("Redis client connected");
+  logger.info("Redis client connected");
   await initMongoDB();
-  console.log("MongoDB client connected");
+  logger.info("MongoDB client connected");
   await redisService.initializeRedis(redisClient);
 
   await initBatchTransferWorker();
-  console.log("Batch execution worker started");
+  logger.info("Batch execution worker started");
 
   const PORT = process.env.PORT || 5001;
   const server = express();
@@ -54,16 +55,16 @@ async function main() {
   server.use(routes);
 
   server.listen(PORT, async () => {
-    console.info(`App running on Port ${PORT}`);
+    logger.info(`App running on Port ${PORT}`);
 
     const gracefulShutdown = async () => {
       await scheduler.gracefulShutdown();
-      console.info("Batch Execution workers stopped");
+      logger.info("Batch Execution workers stopped");
       redisClient.quit();
-      console.info("\nRedis disconnected");
+      logger.info("\nRedis disconnected");
       mongoose.connection.close();
-      console.info("MongoDB disconnected");
-      console.info("Graceful shutdown");
+      logger.info("MongoDB disconnected");
+      logger.info("Graceful shutdown");
       process.exit(0);
     };
 
@@ -85,7 +86,7 @@ async function main() {
       "SIGTERM",
     ].forEach((evt) => {
       process.on(evt, gracefulShutdown);
-      process.on(evt, console.log);
+      process.on(evt, logger.fatal);
     });
   });
 }
