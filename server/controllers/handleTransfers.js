@@ -29,98 +29,93 @@ const createTransfer = async (request, response) => {
       required
     );
 
-    if (!validRequestBody) {
-      return response.status(404).json({
-        success: false,
-        message: "Please provide valid values",
+    if (validRequestBody === true) {
+      const {
+        senderPublicKey,
+        recipientPublicKey,
+        senderAccountId,
+        receiverAccountId,
+        amount,
+        nonce,
+        signature,
+      } = request.body;
+
+      const senderAccount = await UsersModel.findOne({
+        publicKey: senderPublicKey,
+      });
+      const receiverAccount = await UsersModel.findOne({
+        publicKey: recipientPublicKey,
+      });
+
+      if (!senderAccount || !receiverAccount) {
+        return response.status(404).json({
+          success: false,
+          message: "Sender or Recipient Acount not found",
+        });
+      }
+
+      const decimalCountOfAmount = countDecimals(parseFloat(amount));
+
+      if (decimalCountOfAmount > 2) {
+        return response.status(404).json({
+          success: false,
+          message: "Amount Should have a maximum of 2 decimal places",
+        });
+      }
+
+      //  nonce validation
+      const nonceInformation = await redisService.get(
+        `${senderAccountId}/${nonce}`
+      );
+
+      if (
+        (!nonceInformation && nonceInformation !== false) ||
+        nonceInformation === "true"
+      ) {
+        return response.status(404).json({
+          success: false,
+          message: "Nonce expired",
+        });
+      }
+
+      await redisService.set(`${senderAccountId}/${nonce}`, "true", 600);
+
+      const verify = crypto.createVerify("sha256");
+
+      const data = {
+        senderAccountId,
+        receiverAccountId,
+        senderPublicKey,
+        recipientPublicKey,
+        amount,
+        nonce,
+      };
+
+      verify.update(JSON.stringify(data));
+      const isDataVerified = verify.verify(senderPublicKey, signature, "hex");
+
+      if (!isDataVerified) {
+        return response.status(404).json({
+          success: false,
+          message: "Malicious signature/transaction received",
+        });
+      }
+      const identifier = generateTimeBasedIdentifier();
+      const referenceId = generateUUID();
+      await redisService.batchIdentifiersStack.push(identifier);
+
+      await TransfersModel.create({
+        ...data,
+        identifier: identifier,
+        transactionId: referenceId.toString(),
+      });
+
+      return response.status(200).json({
+        sucess: true,
+        message: "Transfer Initiated",
+        transactionId: referenceId.toString(),
       });
     }
-
-    const {
-      senderPublicKey,
-      recipientPublicKey,
-      senderAccountId,
-      receiverAccountId,
-      amount,
-      nonce,
-      signature,
-    } = request.body;
-
-    const senderAccount = await UsersModel.findOne({
-      publicKey: senderPublicKey,
-    });
-    const receiverAccount = await UsersModel.findOne({
-      publicKey: recipientPublicKey,
-    });
-
-    if (!senderAccount || !receiverAccount) {
-      return response.status(404).json({
-        success: false,
-        message: "Sender or Recipient Acount not found",
-      });
-    }
-
-    const decimalCountOfAmount = countDecimals(parseFloat(amount));
-
-    if (decimalCountOfAmount > 2) {
-      return response.status(404).json({
-        success: false,
-        message: "Amount Should have a maximum of 2 decimal places",
-      });
-    }
-
-    //  nonce validation
-    const nonceInformation = await redisService.get(
-      `${senderAccountId}/${nonce}`
-    );
-
-    if (
-      (!nonceInformation && nonceInformation !== false) ||
-      nonceInformation === "true"
-    ) {
-      return response.status(404).json({
-        success: false,
-        message: "Nonce expired",
-      });
-    }
-
-    await redisService.set(`${senderAccountId}/${nonce}`, "true", 600);
-
-    const verify = crypto.createVerify("sha256");
-
-    const data = {
-      senderAccountId,
-      receiverAccountId,
-      senderPublicKey,
-      recipientPublicKey,
-      amount,
-      nonce,
-    };
-
-    verify.update(JSON.stringify(data));
-    const isDataVerified = verify.verify(senderPublicKey, signature, "hex");
-
-    if (!isDataVerified) {
-      return response.status(404).json({
-        success: false,
-        message: "Malicious signature/transaction received",
-      });
-    }
-    const identifier = generateTimeBasedIdentifier();
-    const referenceId = generateUUID();
-    await redisService.batchIdentifiersStack.push(identifier);
-
-    await TransfersModel.create({
-      ...data,
-      identifier: identifier,
-      transactionId: referenceId.toString(),
-    });
-
-    return response.status(200).json({
-      sucess: true,
-      message: "Transfer Initiated",
-      transactionId: referenceId.toString(),
-    });
   } catch (error) {
     return response.status(504).json({
       success: false,

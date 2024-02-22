@@ -85,8 +85,8 @@ async function main() {
       "SIGUSR2",
       "SIGTERM",
     ].forEach((evt) => {
+      process.on(evt, console.warn);
       process.on(evt, gracefulShutdown);
-      process.on(evt, logger.fatal);
     });
   });
 }

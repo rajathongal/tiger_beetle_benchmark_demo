@@ -13,30 +13,26 @@ const GetNonce = async (request, response) => {
       required
     );
 
-    if (!validRequestBody) {
-      return response.status(404).json({
-        success: false,
-        message: "Please provide valid value for accountId",
+    if (validRequestBody === true) {
+      const { accountId } = request.body;
+      const userAccount = await isUserExists(accountId);
+
+      if (!userAccount) {
+        return response.status(404).json({
+          sucess: false,
+          message: "Account not found",
+        });
+      }
+
+      const nonce = crypto.randomBytes(16).toString("hex");
+      await redisService.set(`${accountId}/${nonce}`, "false", 600); // key, value, ttl
+
+      return response.status(200).json({
+        success: true,
+        nonce: nonce,
+        message: "This nonce is valid for 10 Minutes",
       });
     }
-    const { accountId } = request.body;
-    const userAccount = await isUserExists(accountId);
-
-    if (!userAccount) {
-      return response.status(404).json({
-        sucess: false,
-        message: "Account not found",
-      });
-    }
-
-    const nonce = crypto.randomBytes(16).toString("hex");
-    await redisService.set(`${accountId}/${nonce}`, "false", 600); // key, value, ttl
-
-    return response.status(200).json({
-      success: true,
-      nonce: nonce,
-      message: "This nonce is valid for 10 Minutes",
-    });
   } catch (error) {
     return response.status(504).json({
       success: false,
@@ -60,54 +56,58 @@ const GetSignedTransaction = async (request, response) => {
       required
     );
 
-    if (!validRequestBody) {
-      return response.status(404).json({
-        success: false,
-        message: "Please provide valid value for accountId",
+    if (validRequestBody === true) {
+      const {
+        senderPublicKey,
+        recipientPublicKey,
+        senderPrivateKey,
+        amount,
+        nonce,
+      } = request.body;
+
+      const senderAccount = await UsersModel.findOne({
+        publicKey: senderPublicKey,
+      });
+      const receiverAccount = await UsersModel.findOne({
+        publicKey: recipientPublicKey,
+      });
+
+      if (!senderAccount || !receiverAccount) {
+        return response.status(404).json({
+          success: false,
+          message: "Sender or Recipient Acount not found",
+        });
+      }
+
+      const decimalCountOfAmount = countDecimals(parseFloat(amount));
+
+      if (decimalCountOfAmount > 2) {
+        return response.status(404).json({
+          success: false,
+          message: "Amount Should have a maximum of 2 decimal places",
+        });
+      }
+
+      const data = {
+        senderAccountId: senderAccount.accountId,
+        receiverAccountId: receiverAccount.accountId,
+        senderPublicKey,
+        recipientPublicKey,
+        amount: amount,
+        nonce: nonce,
+      };
+
+      const senderPrivateKeyPair = crypto.createPrivateKey(senderPrivateKey);
+      const signatureGenerator = crypto.createSign("sha256");
+      signatureGenerator.update(JSON.stringify(data));
+      const signature = signatureGenerator.sign(senderPrivateKeyPair, "hex");
+
+      return response.status(200).json({
+        sucess: true,
+        ...data,
+        signature,
       });
     }
-
-    const { senderPublicKey, recipientPublicKey, senderPrivateKey, amount, nonce } = request.body;
-
-    const senderAccount = await UsersModel.findOne({publicKey: senderPublicKey});
-    const receiverAccount = await UsersModel.findOne({publicKey: recipientPublicKey});
-
-    if( !senderAccount || !receiverAccount ) {
-      return response.status(404).json({
-        success: false,
-        message: "Sender or Recipient Acount not found",
-      });
-    }
-
-    const decimalCountOfAmount = countDecimals(parseFloat(amount));
-
-    if(decimalCountOfAmount > 2) {
-      return response.status(404).json({
-        success: false,
-        message: "Amount Should have a maximum of 2 decimal places",
-      });
-    }
-
-    const data = {
-      senderAccountId: senderAccount.accountId,
-      receiverAccountId: receiverAccount.accountId,
-      senderPublicKey,
-      recipientPublicKey,
-      amount: amount,
-      nonce: nonce
-    };
-
-    const senderPrivateKeyPair = crypto.createPrivateKey(senderPrivateKey);
-    const signatureGenerator = crypto.createSign("sha256");
-    signatureGenerator.update(JSON.stringify(data));
-    const signature = signatureGenerator.sign(senderPrivateKeyPair, 'hex')
-
-    return response.status(200).json({
-      sucess: true,
-      ...data,
-      signature
-    });
-
   } catch (error) {
     return response.status(504).json({
       success: false,
