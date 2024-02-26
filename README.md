@@ -40,8 +40,31 @@ Go to docker desktop > setting > Docker Engine and add the below scripts, and ma
 
 Now delete data folder and restart docker and try again.
 
-Currently a demo project is included in the `index.js` file which can be run by using the below command
+## Running the server
 
 ```console
-node index.js
+npm install
+
+npm run start:server
+```
+
+## Running the Benchmark
+
+The benchmarking is done using Grafana's K6 testing tool. This requires installation of the K6.
+
+Installation guide [link](https://k6.io/docs/get-started/installation/).
+
+Running the benchmark
+
+```console
+k6 run k6.test.js   
+```
+
+Feel free to adjust the options of K6 in k6.test.js file. It looks something like below.
+
+```javascript
+export const options = {
+  vus: 1000,
+  duration: "10s",
+};
 ```
