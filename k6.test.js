@@ -20,56 +20,71 @@ export default function () {
 
     const randomUserA = JSON.parse(randomUserACreateResponse.body);
     const randomUserB = JSON.parse(randomUserBCreateResponse.body);
-    const { accountId } = randomUserA;
-    if (accountId) {
-      const senderAccountId = accountId;
-      const noncePayload = JSON.stringify({ accountId: senderAccountId });
 
-      const nonceResponse = http.post(
-        "http://localhost:5001/accounts/get-nonce",
-        noncePayload,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-      const { nonce } = JSON.parse(nonceResponse.body);
-      if (nonce) {
-        const getSignedTransactionPayload = JSON.stringify({
-          senderPublicKey: randomUserA.publicKey,
-          recipientPublicKey: randomUserB.publicKey,
-          senderPrivateKey: randomUserA.privateKey,
-          amount: "10.37",
-          nonce,
-        });
+    if (
+      typeof randomUserA === "object" &&
+      randomUserA !== null &&
+      typeof randomUserB === "object" &&
+      randomUserB !== null
+    ) {
+      const { accountId } = randomUserA;
+      if (accountId) {
+        const senderAccountId = accountId;
+        const noncePayload = JSON.stringify({ accountId: senderAccountId });
 
-        const signedTransactionResponse = http.post(
-          "http://localhost:5001/accounts/get-signed-transaction",
-          getSignedTransactionPayload,
+        const nonceResponse = http.post(
+          "http://localhost:5001/accounts/get-nonce",
+          noncePayload,
           {
             headers: { "Content-Type": "application/json" },
           }
         );
-        const transactionPayload = signedTransactionResponse.body;
-        const createTransferResponse = http.post(
-          "http://localhost:5001/accounts/create-transfer",
-          transactionPayload,
-          {
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-        const { transactionId } = JSON.parse(
-          createTransferResponse.body
-        )
-        if (transactionId) {
-          
-          sleep(5);
-          const transferCompletionResponse = http.get(
-            `http://localhost:5001/accounts/getTransfer/${transactionId}`
-          );
+        const nonceDetails = JSON.parse(nonceResponse.body);
+        if (typeof nonceDetails === "object" && nonceDetails !== null) {
+          const { nonce } = nonceDetails;
+          if (nonce) {
+            const getSignedTransactionPayload = JSON.stringify({
+              senderPublicKey: randomUserA.publicKey,
+              recipientPublicKey: randomUserB.publicKey,
+              senderPrivateKey: randomUserA.privateKey,
+              amount: "10.37",
+              nonce,
+            });
 
-          expect(transferCompletionResponse.status, "response status").to.equal(
-            200
-          );
+            const signedTransactionResponse = http.post(
+              "http://localhost:5001/accounts/get-signed-transaction",
+              getSignedTransactionPayload,
+              {
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+            const transactionPayload = signedTransactionResponse.body;
+            const createTransferResponse = http.post(
+              "http://localhost:5001/accounts/create-transfer",
+              transactionPayload,
+              {
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+            const transferDetails = JSON.parse(createTransferResponse.body);
+            if (
+              typeof transferDetails === "object" &&
+              transferDetails !== null
+            ) {
+              const { transactionId } = transferDetails;
+              if (transactionId) {
+                sleep(5);
+                const transferCompletionResponse = http.get(
+                  `http://localhost:5001/accounts/getTransfer/${transactionId}`
+                );
+
+                expect(
+                  transferCompletionResponse.status,
+                  "response status"
+                ).to.equal(200);
+              }
+            }
+          }
         }
       }
     }

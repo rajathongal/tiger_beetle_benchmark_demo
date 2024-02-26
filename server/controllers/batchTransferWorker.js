@@ -71,7 +71,7 @@ const batchExecuteTransfer = async () => {
 
       const tigerBeetleEndTime = process.hrtime(startTime);
       const tigerBeetleExecutionTime = tigerBeetleEndTime[0] + tigerBeetleEndTime[1] / 1000000000;
-      logger.info(`Execution time of tiger beetle: ${tigerBeetleExecutionTime.toFixed(3)} seconds for ${totalMatchingRecords} records`);
+      logger.info(`Execution time of tiger beetle: ${tigerBeetleExecutionTime.toFixed(3)} seconds for ${totalMatchingRecords} records. Identifier - ${popedIdenifier}`);
 
       const filter = {
         identifier: popedIdenifier,
@@ -89,7 +89,7 @@ const batchExecuteTransfer = async () => {
 
       const endTime = process.hrtime(startTime);
       const executionTime = endTime[0] + endTime[1] / 1000000000;
-      logger.info(`Execution time of whole transfer: ${executionTime.toFixed(3)} seconds for ${totalMatchingRecords} records`);
+      logger.info(`Execution time of whole transfer: ${executionTime.toFixed(3)} seconds for ${totalMatchingRecords} records. Identifier - ${popedIdenifier}`);
     }
 
     redisClient.quit();
