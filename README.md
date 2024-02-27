@@ -1,4 +1,4 @@
-# Tiger_beetle_simulation (In progress)
+# Tiger_beetle_simulation
 
 Tech used
 
